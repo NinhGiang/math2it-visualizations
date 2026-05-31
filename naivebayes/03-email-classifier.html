@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Naive Bayes — Email Classifier Demo</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+    :root {
+      --bg:#f8f7f4;
+      --bg2:#f0ede8;
+      --bg3:#e8e4dc;
+      --border:#d8d3c8;
+      --text:#1a1814;
+      --text2:#6b6560;
+      --text3:#9b958e;
+
+      --green:#1D9E75;
+      --green-bg:#E1F5EE;
+      --green-dark:#085041;
+
+      --red:#E24B4A;
+      --red-bg:#FCEBEB;
+      --red-dark:#791F1F;
+
+      --blue:#185FA5;
+      --blue-bg:#E6F1FB;
+
+      --purple:#534AB7;
+      --purple-bg:#EEEDFE;
+
+      --amber:#854F0B;
+      --amber-bg:#FAEEDA;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    .demo-box {
+      background: var(--bg2);
+      border: .5px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.7;
+      max-width: 760px;
+    }
+
+    .lang-tag {
+      display: inline-block;
+      background: var(--purple-bg);
+      color: var(--purple);
+      border: .5px solid var(--purple);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 10px;
+    }
+
+    .email-input {
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      background: var(--bg);
+      border: .5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      line-height: 1.6;
+      outline: none;
+    }
+
+    .email-input:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 2px rgba(83, 74, 183, 0.12);
+    }
+
+    .slider-group {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      background: var(--bg);
+      border: .5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 10px;
+    }
+
+    .slider-group span:first-child {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--text2);
+      white-space: nowrap;
+    }
+
+    .slider-group .val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--purple);
+      min-width: 44px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--purple);
+      cursor: pointer;
+    }
+
+    .run-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      border: .5px solid var(--border);
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .btn:hover {
+      background: var(--purple-bg);
+      border-color: var(--purple);
+    }
+
+    .btn.primary {
+      background: var(--purple);
+      border-color: var(--purple);
+      color: white;
+      font-weight: 500;
+    }
+
+    .btn.primary:hover {
+      background: #453ca0;
+      border-color: #453ca0;
+    }
+
+    .matched-section {
+      margin-bottom: 8px;
+    }
+
+    .matched-title {
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--text3);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .token {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      margin: 2px;
+    }
+
+    .token.spam {
+      background: var(--red-bg);
+      color: var(--red-dark);
+    }
+
+    .token.ham {
+      background: var(--green-bg);
+      color: var(--green-dark);
+    }
+
+    .token.neutral {
+      background: var(--bg3);
+      color: var(--text2);
+    }
+
+    .gauge-wrap {
+      background: var(--bg);
+      border: .5px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    .gauge-bar {
+      width: 100%;
+      height: 12px;
+      background: var(--bg3);
+      border-radius: 999px;
+      overflow: hidden;
+      border: .5px solid var(--border);
+    }
+
+    .gauge-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      transition: width .25s ease, background .25s ease;
+    }
+
+    .gauge-label {
+      margin-top: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .verdict {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+
+    .verdict.ham {
+      background: var(--green-bg);
+      color: var(--green-dark);
+      border: .5px solid var(--green);
+    }
+
+    .verdict.spam {
+      background: var(--red-bg);
+      color: var(--red-dark);
+      border: .5px solid var(--red);
+    }
+
+    .verdict.uncertain {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: .5px solid #d7aa5e;
+    }
+
+    .analysis-meta {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .empty-result {
+      color: var(--text3);
+      font-size: 12px;
+      background: var(--bg);
+      border: .5px dashed var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    @media (max-width: 520px) {
+      .demo-box {
+        padding: 12px;
+      }
+
+      .slider-group {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .slider-group .val {
+        text-align: left;
+      }
+
+      .run-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .btn.primary {
+        grid-column: span 2;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="demo-box">
+    <div class="lang-tag">thử nghiệm</div>
+
+    <textarea
+      class="email-input"
+      id="emailText"
+      placeholder="Nhập nội dung email muốn kiểm tra...
+Ví dụ: Chúc mừng bạn đã trúng thưởng 1 triệu đô! Click vào link để nhận thưởng ngay."></textarea>
+
+    <div class="slider-group">
+      <span>Ngưỡng spam =</span>
+      <input type="range" min="0.3" max="0.9" step="0.05" value="0.65" id="threshSlider">
+      <span class="val" id="threshVal">65%</span>
+    </div>
+
+    <div class="run-row">
+      <button class="btn primary" id="analyzeBtn" type="button">▶ Phân tích</button>
+      <button class="btn" id="spamExampleBtn" type="button">Ví dụ spam</button>
+      <button class="btn" id="hamExampleBtn" type="button">Ví dụ ham</button>
+      <button class="btn" id="clearBtn" type="button">✕ Xoá</button>
+    </div>
+
+    <div id="analysisResult" style="margin-top:12px">
+      <div class="empty-result">
+        Nhập nội dung email hoặc chọn một ví dụ, sau đó bấm “Phân tích”.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const emailText = document.getElementById("emailText");
+    const threshSlider = document.getElementById("threshSlider");
+    const threshVal = document.getElementById("threshVal");
+    const analysisResult = document.getElementById("analysisResult");
+
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const spamExampleBtn = document.getElementById("spamExampleBtn");
+    const hamExampleBtn = document.getElementById("hamExampleBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    const spamWords = [
+      "trúng",
+      "thưởng",
+      "miễn phí",
+      "click",
+      "triệu",
+      "đô",
+      "nhận",
+      "ngay",
+      "khuyến mãi",
+      "voucher",
+      "link",
+      "ưu đãi",
+      "quà",
+      "chúc mừng",
+      "xác nhận",
+      "tài khoản",
+      "ẩn danh"
+    ];
+
+    const hamWords = [
+      "họp",
+      "báo cáo",
+      "dự án",
+      "lịch",
+      "tài liệu",
+      "cuộc",
+      "trao đổi",
+      "công việc",
+      "deadline",
+      "nhóm",
+      "khách hàng",
+      "kế hoạch",
+      "nội dung",
+      "gửi",
+      "xem lại",
+      "phản hồi"
+    ];
+
+    const examples = {
+      spam: "Chúc mừng bạn đã trúng thưởng 1 triệu đô! Click vào link để nhận thưởng ngay và xác nhận tài khoản.",
+      ham: "Nhờ bạn xem lại báo cáo dự án trước cuộc họp chiều nay. Mình sẽ gửi thêm tài liệu và kế hoạch cập nhật."
+    };
+
+    function normalizeText(text) {
+      return text
+        .toLowerCase()
+        .normalize("NFC")
+        .replace(/[.,!?;:()[\]{}"']/g, " ");
+    }
+
+    function countMatches(text, dictionary) {
+      const normalized = normalizeText(text);
+
+      return dictionary.filter(word => {
+        const normalizedWord = normalizeText(word).trim();
+        return normalized.includes(normalizedWord);
+      });
+    }
+
+    function estimateSpamProbability(spamCount, hamCount) {
+      /*
+        Đây là mô phỏng đơn giản cho mục đích visualization,
+        không phải Naive Bayes classifier đầy đủ.
+
+        Ý tưởng:
+        - nhiều từ spam → xác suất spam tăng
+        - nhiều từ ham → xác suất spam giảm
+        - dùng smoothing để tránh 0% hoặc 100% tuyệt đối
+      */
+
+      const spamEvidence = spamCount + 1;
+      const hamEvidence = hamCount + 1;
+      const probability = spamEvidence / (spamEvidence + hamEvidence);
+
+      return probability;
+    }
+
+    function updateThresh() {
+      const threshold = Number(threshSlider.value);
+      threshVal.textContent = `${Math.round(threshold * 100)}%`;
+    }
+
+    function getVerdict(probability, threshold) {
+      if (probability >= threshold) {
+        return {
+          label: "SPAM",
+          className: "spam",
+          color: "var(--red)"
+        };
+      }
+
+      if (probability >= threshold - 0.15) {
+        return {
+          label: "KHÔNG CHẮC",
+          className: "uncertain",
+          color: "var(--amber)"
+        };
+      }
+
+      return {
+        label: "HAM",
+        className: "ham",
+        color: "var(--green)"
+      };
+    }
+
+    function renderTokens(spamMatches, hamMatches) {
+      const spamTokens = spamMatches.map(word =>
+        `<span class="token spam">${word}</span>`
+      ).join(" ");
+
+      const hamTokens = hamMatches.map(word =>
+        `<span class="token ham">${word}</span>`
+      ).join(" ");
+
+      if (!spamTokens && !hamTokens) {
+        return `<span class="token neutral">không khớp từ nào</span>`;
+      }
+
+      return `${spamTokens} ${hamTokens}`;
+    }
+
+    function analyzeEmail() {
+      const text = emailText.value.trim();
+      const threshold = Number(threshSlider.value);
+
+      if (!text) {
+        analysisResult.innerHTML = `
+          <div class="empty-result">
+            Chưa có nội dung email để phân tích.
+          </div>
+        `;
+        return;
+      }
+
+      const spamMatches = countMatches(text, spamWords);
+      const hamMatches = countMatches(text, hamWords);
+
+      const spamCount = spamMatches.length;
+      const hamCount = hamMatches.length;
+
+      const probability = estimateSpamProbability(spamCount, hamCount);
+      const probabilityPercent = probability * 100;
+
+      const verdict = getVerdict(probability, threshold);
+
+      analysisResult.innerHTML = `
+        <div class="matched-section">
+          <div class="matched-title">Từ khớp được:</div>
+          ${renderTokens(spamMatches, hamMatches)}
+        </div>
+
+        <div class="gauge-wrap">
+          <div class="gauge-bar">
+            <div
+              class="gauge-fill"
+              style="width:${probabilityPercent.toFixed(1)}%;background:${verdict.color}">
+            </div>
+          </div>
+
+          <div class="gauge-label">${probabilityPercent.toFixed(1)}%</div>
+          <div class="verdict ${verdict.className}">${verdict.label}</div>
+        </div>
+
+        <div class="analysis-meta">
+          ${spamCount} từ spam · ${hamCount} từ ham · ngưỡng ${Math.round(threshold * 100)}%
+        </div>
+      `;
+    }
+
+    function loadExample(type) {
+      emailText.value = examples[type] || "";
+      analyzeEmail();
+    }
+
+    function clearResult() {
+      emailText.value = "";
+      analysisResult.innerHTML = `
+        <div class="empty-result">
+          Nhập nội dung email hoặc chọn một ví dụ, sau đó bấm “Phân tích”.
+        </div>
+      `;
+    }
+
+    threshSlider.addEventListener("input", () => {
+      updateThresh();
+      if (emailText.value.trim()) {
+        analyzeEmail();
+      }
+    });
+
+    analyzeBtn.addEventListener("click", analyzeEmail);
+    spamExampleBtn.addEventListener("click", () => loadExample("spam"));
+    hamExampleBtn.addEventListener("click", () => loadExample("ham"));
+    clearBtn.addEventListener("click", clearResult);
+
+    updateThresh();
+  </script>
+</body>
+</html>
