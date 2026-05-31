@@ -1,0 +1,245 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+  :root {
+    --bg:#f8f7f4;
+    --bg2:#f0ede8;
+    --border:#d8d3c8;
+    --text:#1a1814;
+    --text2:#6b6560;
+    --text3:#9b958e;
+    --green:#1D9E75;
+    --green-bg:#E1F5EE;
+    --green-dark:#085041;
+    --red:#E24B4A;
+    --red-bg:#FCEBEB;
+    --red-dark:#791F1F;
+    --purple:#534AB7;
+    --purple-bg:#EEEDFE;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  .demo-box {
+    background: var(--bg2);
+    border: .5px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+
+  .prob-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg);
+    border: .5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .prob-table th,
+  .prob-table td {
+    padding: 8px 10px;
+    border-bottom: .5px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .prob-table th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    background: var(--bg2);
+  }
+
+  .word-cell {
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .spam-cell {
+    color: var(--red-dark);
+    white-space: nowrap;
+  }
+
+  .ham-cell {
+    color: var(--green-dark);
+    white-space: nowrap;
+  }
+
+  .bar-wrap {
+    display: inline-block;
+    width: 70px;
+    height: 6px;
+    background: #ddd7ce;
+    border-radius: 999px;
+    margin-right: 6px;
+    vertical-align: middle;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 999px;
+  }
+
+  .bar-spam {
+    background: var(--red);
+  }
+
+  .bar-ham {
+    background: var(--green);
+  }
+
+  .run-row {
+    margin-top: 12px;
+  }
+
+  .btn {
+    border: .5px solid var(--border);
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 7px 10px;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .btn:hover {
+    background: var(--purple-bg);
+    border-color: var(--purple);
+  }
+
+  .chain-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .chain-step {
+    background: var(--bg);
+    border: .5px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .chain-op {
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .cs-word {
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .cs-prob {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+  }
+</style>
+
+<div class="demo-box">
+  <table class="prob-table">
+    <thead>
+      <tr>
+        <th>Từ</th>
+        <th>P(từ | spam)</th>
+        <th>P(từ | ham)</th>
+      </tr>
+    </thead>
+
+    <tbody id="wordTable">
+      <tr>
+        <td class="word-cell">trúng</td>
+        <td class="spam-cell">
+          <div class="bar-wrap"><div class="bar-fill bar-spam" style="width:82%"></div></div>
+          82%
+        </td>
+        <td class="ham-cell">
+          <div class="bar-wrap"><div class="bar-fill bar-ham" style="width:4%"></div></div>
+          4%
+        </td>
+      </tr>
+
+      <tr>
+        <td class="word-cell">thưởng</td>
+        <td class="spam-cell">
+          <div class="bar-wrap"><div class="bar-fill bar-spam" style="width:76%"></div></div>
+          76%
+        </td>
+        <td class="ham-cell">
+          <div class="bar-wrap"><div class="bar-fill bar-ham" style="width:3%"></div></div>
+          3%
+        </td>
+      </tr>
+
+      <tr>
+        <td class="word-cell">miễn phí</td>
+        <td class="spam-cell">
+          <div class="bar-wrap"><div class="bar-fill bar-spam" style="width:68%"></div></div>
+          68%
+        </td>
+        <td class="ham-cell">
+          <div class="bar-wrap"><div class="bar-fill bar-ham" style="width:12%"></div></div>
+          12%
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="run-row">
+    <button class="btn" type="button">↺ Xáo trộn ví dụ</button>
+  </div>
+
+  <div style="margin-top:12px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">
+      ∏ P(wᵢ | spam) — 3 từ đầu tiên:
+    </div>
+
+    <div class="chain-steps" id="chainSteps">
+      <div class="chain-step">
+        <span class="cs-word">trúng</span>
+        <span class="cs-prob" style="color:var(--red-dark)">82%</span>
+      </div>
+
+      <span class="chain-op">×</span>
+
+      <div class="chain-step">
+        <span class="cs-word">thưởng</span>
+        <span class="cs-prob" style="color:var(--red-dark)">76%</span>
+      </div>
+
+      <span class="chain-op">×</span>
+
+      <div class="chain-step">
+        <span class="cs-word">miễn phí</span>
+        <span class="cs-prob" style="color:var(--red-dark)">68%</span>
+      </div>
+
+      <span class="chain-op">=</span>
+
+      <div class="chain-step" style="background:var(--red-bg);border-color:#e8aaaa;">
+        <span class="cs-word" style="color:var(--red-dark)">∏ P(wᵢ|spam)</span>
+        <span class="cs-prob" style="color:var(--red-dark)">42.38%</span>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:var(--text2);margin-top:6px" id="chainResult">
+      Tích 3 xác suất = 42.38% — con số nhỏ dần khi thêm từ, đây là lý do cần hiệu chỉnh Laplace.
+    </div>
+  </div>
+</div>
