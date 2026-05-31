@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Naive Bayes — Likelihood Ratio</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+    :root {
+      --bg:#f8f7f4;
+      --bg2:#f0ede8;
+      --bg3:#e8e4dc;
+      --border:#d8d3c8;
+      --text:#1a1814;
+      --text2:#6b6560;
+      --text3:#9b958e;
+
+      --green:#1D9E75;
+      --green-bg:#E1F5EE;
+      --green-dark:#085041;
+
+      --red:#E24B4A;
+      --red-bg:#FCEBEB;
+      --red-dark:#791F1F;
+
+      --blue:#185FA5;
+      --blue-bg:#E6F1FB;
+
+      --purple:#534AB7;
+      --purple-bg:#EEEDFE;
+
+      --amber:#854F0B;
+      --amber-bg:#FAEEDA;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    .demo-box {
+      background: var(--bg2);
+      border: .5px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.7;
+      max-width: 760px;
+    }
+
+    .demo-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 10px;
+    }
+
+    .bayes-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .bayes-card {
+      background: var(--bg);
+      border: .5px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .bayes-card.highlight {
+      background: var(--purple-bg);
+      border-color: var(--purple);
+    }
+
+    .bc-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 4px;
+    }
+
+    .bc-val {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    .bayes-card.highlight .bc-val {
+      color: var(--purple);
+      font-weight: 500;
+    }
+
+    .slider-group {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      background: var(--bg);
+      border: .5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+
+    .slider-group span:first-child {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .slider-group .val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--purple);
+      min-width: 42px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--purple);
+      cursor: pointer;
+    }
+
+    .gauge-wrap {
+      background: var(--bg);
+      border: .5px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    .gauge-bar {
+      width: 100%;
+      height: 12px;
+      background: var(--bg3);
+      border-radius: 999px;
+      overflow: hidden;
+      border: .5px solid var(--border);
+    }
+
+    .gauge-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      transition: width .25s ease, background .25s ease;
+    }
+
+    .gauge-label {
+      margin-top: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .verdict {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+
+    .verdict.ham {
+      background: var(--green-bg);
+      color: var(--green-dark);
+      border: .5px solid var(--green);
+    }
+
+    .verdict.spam {
+      background: var(--red-bg);
+      color: var(--red-dark);
+      border: .5px solid var(--red);
+    }
+
+    .verdict.uncertain {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: .5px solid #d7aa5e;
+    }
+
+    .note {
+      color: var(--text2);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .formula-step {
+      background: var(--bg2);
+      border: .5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin: 6px 0;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      line-height: 1.9;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      background: var(--purple-bg);
+      color: var(--purple);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    .step-eq {
+      color: var(--text);
+      font-size: 13px;
+      display: block;
+    }
+
+    .step-why {
+      color: var(--text3);
+      font-size: 11px;
+      display: block;
+      margin-top: 2px;
+      font-style: italic;
+    }
+
+    .ratio-box {
+      display: grid;
+      grid-template-columns: 1fr 32px 1fr;
+      gap: 0;
+      margin: 10px 0;
+      align-items: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+    }
+
+    .ratio-frac {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ratio-num {
+      background: var(--green-bg);
+      border: .5px solid var(--green);
+      border-radius: 6px 6px 0 0;
+      padding: 8px 12px;
+      text-align: center;
+      color: var(--green-dark);
+    }
+
+    .ratio-line {
+      width: 100%;
+      height: .5px;
+      background: var(--text);
+    }
+
+    .ratio-den {
+      background: var(--red-bg);
+      border: .5px solid #e8aaaa;
+      border-radius: 0 0 6px 6px;
+      padding: 8px 12px;
+      text-align: center;
+      color: var(--red-dark);
+      border-top: none;
+    }
+
+    .ratio-eq {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--text3);
+      padding: 0 6px;
+    }
+
+    .ratio-result {
+      background: var(--purple-bg);
+      border: .5px solid var(--purple);
+      border-radius: 6px;
+      padding: 10px 14px;
+      text-align: center;
+      color: var(--purple);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    @media (max-width: 520px) {
+      .demo-box {
+        padding: 12px;
+      }
+
+      .bayes-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .slider-group {
+        grid-template-columns: auto 1fr auto;
+        gap: 8px;
+      }
+
+      .ratio-box {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .ratio-eq {
+        transform: rotate(90deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="demo-box">
+    <div class="demo-title">Likelihood ratio → posterior probability</div>
+
+    <div class="bayes-grid">
+      <div class="bayes-card">
+        <div class="bc-label">Ý nghĩa của R</div>
+        <div class="bc-val">
+          R càng nhỏ thì bằng chứng càng nghiêng về spam. R càng lớn thì bằng chứng càng nghiêng về ham.
+        </div>
+      </div>
+
+      <div class="bayes-card highlight">
+        <div class="bc-label">Công thức minh họa</div>
+        <div class="bc-val">
+          P(spam) = 1 / (1 + R)
+        </div>
+      </div>
+    </div>
+
+    <div class="slider-group">
+      <span>R =</span>
+      <input type="range" min="0" max="50" step="0.5" value="30" id="rSlider">
+      <span class="val" id="rVal">30.0</span>
+    </div>
+
+    <div class="gauge-wrap">
+      <div class="gauge-bar">
+        <div class="gauge-fill" id="rGauge"></div>
+      </div>
+
+      <div class="gauge-label" id="rProb">P(spam) = 3.2%</div>
+      <div class="verdict ham" id="rVerdict">HAM</div>
+    </div>
+
+    <div class="note" id="rExplain" style="margin-top:8px">
+      R = 30.0 rất lớn → P(spam) = 3.2% — gần như chắc chắn ham.
+    </div>
+
+    <div class="formula-step" style="margin-top:12px">
+      <span class="step-num">1</span>
+      <div>
+        <span class="step-eq">P(spam) = 1 / (1 + R)</span>
+        <span class="step-why">Ở đây R đại diện cho tỷ lệ bằng chứng nghiêng về ham so với spam.</span>
+      </div>
+    </div>
+
+    <div class="ratio-box">
+      <div class="ratio-frac">
+        <div class="ratio-num">Bằng chứng cho ham</div>
+        <div class="ratio-line"></div>
+        <div class="ratio-den">Bằng chứng cho spam</div>
+      </div>
+
+      <div class="ratio-eq">→</div>
+
+      <div class="ratio-result" id="ratioResult">
+        R = 30.0 → P(spam) = 3.2%
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const rSlider = document.getElementById("rSlider");
+    const rVal = document.getElementById("rVal");
+    const rGauge = document.getElementById("rGauge");
+    const rProb = document.getElementById("rProb");
+    const rVerdict = document.getElementById("rVerdict");
+    const rExplain = document.getElementById("rExplain");
+    const ratioResult = document.getElementById("ratioResult");
+
+    function getVerdict(probSpam) {
+      if (probSpam >= 0.7) {
+        return {
+          label: "SPAM",
+          className: "spam",
+          color: "var(--red)",
+          explanation: "rất cao → gần như chắc chắn spam."
+        };
+      }
+
+      if (probSpam <= 0.3) {
+        return {
+          label: "HAM",
+          className: "ham",
+          color: "var(--green)",
+          explanation: "rất thấp → gần như chắc chắn ham."
+        };
+      }
+
+      return {
+        label: "KHÔNG CHẮC",
+        className: "uncertain",
+        color: "var(--amber)",
+        explanation: "ở vùng trung gian → mô hình chưa quá chắc chắn."
+      };
+    }
+
+    function updateR() {
+      const r = Number(rSlider.value);
+      const probSpam = 1 / (1 + r);
+      const probPercent = probSpam * 100;
+      const verdict = getVerdict(probSpam);
+
+      rVal.textContent = r.toFixed(1);
+      rGauge.style.width = `${probPercent}%`;
+      rGauge.style.background = verdict.color;
+
+      rProb.textContent = `P(spam) = ${probPercent.toFixed(1)}%`;
+
+      rVerdict.textContent = verdict.label;
+      rVerdict.className = `verdict ${verdict.className}`;
+
+      rExplain.textContent =
+        `R = ${r.toFixed(1)} → P(spam) = ${probPercent.toFixed(1)}% — ${verdict.explanation}`;
+
+      ratioResult.textContent =
+        `R = ${r.toFixed(1)} → P(spam) = ${probPercent.toFixed(1)}%`;
+    }
+
+    rSlider.addEventListener("input", updateR);
+
+    updateR();
+  </script>
+</body>
+</html>
